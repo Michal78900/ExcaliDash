@@ -40,6 +40,10 @@ export const Settings: React.FC = () => {
     "appendDroppedDrawings",
     false,
   );
+  const [showDrawingPreviews, setShowDrawingPreviews] = usePreference(
+    "showDrawingPreviews",
+    true,
+  );
   const mustResetPassword = Boolean(user?.mustResetPassword);
   const [settingsSuccess, setSettingsSuccess] = useState("");
   const [legacyDbImportConfirmation, setLegacyDbImportConfirmation] = useState<{
@@ -419,6 +423,8 @@ export const Settings: React.FC = () => {
             onCompactSidebarChange={setCompactSidebar}
             appendDroppedDrawings={appendDroppedDrawings}
             onAppendDroppedDrawingsChange={setAppendDroppedDrawings}
+            showDrawingPreviews={showDrawingPreviews}
+            onShowDrawingPreviewsChange={setShowDrawingPreviews}
             updateChannel={updateChannel}
             updateInfo={updateInfo}
             updateLoading={updateLoading}

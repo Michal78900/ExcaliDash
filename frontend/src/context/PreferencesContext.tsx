@@ -27,6 +27,7 @@ const KNOWN_KEYS: PreferenceKey[] = [
   "editorAutoHide",
   "compactSidebar",
   "appendDroppedDrawings",
+  "showDrawingPreviews",
 ];
 
 const pickKnown = (source: Partial<Preferences>): Preferences => {

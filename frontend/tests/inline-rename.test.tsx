@@ -27,6 +27,9 @@ vi.mock("../src/api", () => ({
   updateDrawing: vi.fn(async () => ({ version: 2 })),
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
+vi.mock("../src/context/PreferencesContext", () => ({
+  usePreference: (_key: string, defaultValue: unknown) => [defaultValue, vi.fn()],
+}));
 vi.mock("../src/components/drawing-card/useDrawingPreview", () => ({
   useDrawingPreview: () => ({
     previewSvg: null,

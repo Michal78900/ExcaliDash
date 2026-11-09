@@ -4,6 +4,8 @@ import {
   PanelLeft,
   Eye,
   EyeOff,
+  Image,
+  ImageOff,
   Languages,
   Monitor,
   Moon,
@@ -42,6 +44,8 @@ type SettingsMainGridProps = {
   onCompactSidebarChange: (enabled: boolean) => void;
   appendDroppedDrawings: boolean;
   onAppendDroppedDrawingsChange: (enabled: boolean) => void;
+  showDrawingPreviews: boolean;
+  onShowDrawingPreviewsChange: (enabled: boolean) => void;
   updateChannel: api.UpdateChannel;
   updateInfo: api.UpdateInfo | null;
   updateLoading: boolean;
@@ -65,6 +69,8 @@ export const SettingsMainGrid = ({
   onCompactSidebarChange,
   appendDroppedDrawings,
   onAppendDroppedDrawingsChange,
+  showDrawingPreviews,
+  onShowDrawingPreviewsChange,
   updateChannel,
   updateInfo,
   updateLoading,
@@ -163,6 +169,25 @@ export const SettingsMainGrid = ({
           checked={appendDroppedDrawings}
           onChange={onAppendDroppedDrawingsChange}
           ariaLabel="Toggle appending dropped drawings"
+        />
+      </SettingsRow>
+
+      <SettingsRow
+        icon={
+          showDrawingPreviews ? <Image size={20} /> : <ImageOff size={20} />
+        }
+        tileClassName="border-black bg-teal-400 text-black dark:border-neutral-700 dark:bg-teal-400 dark:text-black"
+        title="Drawing thumbnails"
+        description={
+          showDrawingPreviews
+            ? "Show drawing previews on the dashboard"
+            : "Show a pen icon instead (faster)"
+        }
+      >
+        <PlayfulSwitch
+          checked={showDrawingPreviews}
+          onChange={onShowDrawingPreviewsChange}
+          ariaLabel="Toggle drawing thumbnails"
         />
       </SettingsRow>
 

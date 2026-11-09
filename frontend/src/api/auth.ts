@@ -68,6 +68,7 @@ export interface UserPreferences {
   editorAutoHide?: boolean;
   compactSidebar?: boolean;
   appendDroppedDrawings?: boolean;
+  showDrawingPreviews?: boolean;
 }
 
 export interface ApiKeyMetadata {
