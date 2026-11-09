@@ -36,6 +36,10 @@ export const Settings: React.FC = () => {
     "compactSidebar",
     true,
   );
+  const [showDrawingPreviews, setShowDrawingPreviews] = usePreference(
+    "showDrawingPreviews",
+    true,
+  );
   const mustResetPassword = Boolean(user?.mustResetPassword);
   const [settingsSuccess, setSettingsSuccess] = useState("");
   const [legacyDbImportConfirmation, setLegacyDbImportConfirmation] = useState<{
@@ -369,6 +373,8 @@ export const Settings: React.FC = () => {
             onEditorAutoHideChange={setEditorAutoHide}
             compactSidebar={compactSidebar}
             onCompactSidebarChange={setCompactSidebar}
+            showDrawingPreviews={showDrawingPreviews}
+            onShowDrawingPreviewsChange={setShowDrawingPreviews}
             updateChannel={updateChannel}
             updateInfo={updateInfo}
             updateLoading={updateLoading}

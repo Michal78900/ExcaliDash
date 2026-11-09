@@ -3,6 +3,8 @@ import {
   PanelLeft,
   Eye,
   EyeOff,
+  Image,
+  ImageOff,
   Languages,
   Monitor,
   Moon,
@@ -39,6 +41,8 @@ type SettingsMainGridProps = {
   onEditorAutoHideChange: (enabled: boolean) => void;
   compactSidebar: boolean;
   onCompactSidebarChange: (enabled: boolean) => void;
+  showDrawingPreviews: boolean;
+  onShowDrawingPreviewsChange: (enabled: boolean) => void;
   updateChannel: api.UpdateChannel;
   updateInfo: api.UpdateInfo | null;
   updateLoading: boolean;
@@ -60,6 +64,8 @@ export const SettingsMainGrid = ({
   onEditorAutoHideChange,
   compactSidebar,
   onCompactSidebarChange,
+  showDrawingPreviews,
+  onShowDrawingPreviewsChange,
   updateChannel,
   updateInfo,
   updateLoading,
@@ -141,6 +147,25 @@ export const SettingsMainGrid = ({
           checked={compactSidebar}
           onChange={onCompactSidebarChange}
           ariaLabel="Toggle compact sidebar"
+        />
+      </SettingsRow>
+
+      <SettingsRow
+        icon={
+          showDrawingPreviews ? <Image size={20} /> : <ImageOff size={20} />
+        }
+        tileClassName="border-black bg-rose-400 text-black dark:border-neutral-700 dark:bg-rose-400 dark:text-black"
+        title="Drawing thumbnails"
+        description={
+          showDrawingPreviews
+            ? "Show drawing previews on the dashboard"
+            : "Show a pen icon instead (faster)"
+        }
+      >
+        <PlayfulSwitch
+          checked={showDrawingPreviews}
+          onChange={onShowDrawingPreviewsChange}
+          ariaLabel="Toggle drawing thumbnails"
         />
       </SettingsRow>
 

@@ -10,6 +10,7 @@ import { DrawingCardContextMenu } from "./drawing-card/DrawingCardContextMenu";
 import { useDrawingPreview } from "./drawing-card/useDrawingPreview";
 import * as api from "../api";
 import { InlineEditInput } from "./InlineEditInput";
+import { usePreference } from "../context/PreferencesContext";
 
 interface DrawingCardProps {
   drawing: DrawingSummary;
@@ -61,16 +62,21 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [showPreviews] = usePreference("showDrawingPreviews", true);
   const [shouldLoadPreview, setShouldLoadPreview] = useState(
     Boolean(drawing.preview),
   );
   const { previewSvg, buildExportDrawing } = useDrawingPreview(
     drawing,
     onPreviewGenerated,
-    shouldLoadPreview,
+    shouldLoadPreview && showPreviews,
   );
 
   useEffect(() => {
+    if (!showPreviews) {
+      setShouldLoadPreview(false);
+      return;
+    }
     if (drawing.preview) {
       setShouldLoadPreview(true);
       return;
@@ -93,7 +99,7 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
     );
     observer.observe(container);
     return () => observer.disconnect();
-  }, [drawing.id, drawing.preview]);
+  }, [drawing.id, drawing.preview, showPreviews]);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,7 +226,7 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
           )}
         >
           <div className="absolute inset-0 opacity-[0.25] bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] [background-size:24px_24px]"></div>
-          {previewSvg ? (
+          {showPreviews && previewSvg ? (
             <div
               className={clsx(
                 "w-full h-full p-4 sm:p-5 flex items-center justify-center [&>svg]:w-auto [&>svg]:h-auto [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:drop-shadow-xs transition-transform duration-550",

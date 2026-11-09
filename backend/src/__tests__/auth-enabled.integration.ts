@@ -158,13 +158,17 @@ describe("Auth Enabled Toggle Authorization", () => {
         .set("Authorization", `Bearer ${regularUserToken}`)
         .set(csrfHeaderName, csrfToken)
         .send(data);
-    const updated = await setPreference({ compactSidebar: false });
+    const updated = await setPreference({
+      compactSidebar: false,
+      showDrawingPreviews: false,
+    });
     expect(updated.status).toBe(200);
     const fetched = await agent
       .get("/auth/preferences")
       .set("Authorization", `Bearer ${regularUserToken}`);
     expect(fetched.status).toBe(200);
     expect(fetched.body.preferences.compactSidebar).toBe(false);
+    expect(fetched.body.preferences.showDrawingPreviews).toBe(false);
     expect(
       (await setPreference({ compactSidebar: true, unknownPreference: true }))
         .status,

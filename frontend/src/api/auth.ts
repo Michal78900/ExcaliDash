@@ -65,6 +65,7 @@ export interface UserPreferences {
   gridStep?: number;
   editorAutoHide?: boolean;
   compactSidebar?: boolean;
+  showDrawingPreviews?: boolean;
 }
 
 export interface ApiKeyMetadata {
