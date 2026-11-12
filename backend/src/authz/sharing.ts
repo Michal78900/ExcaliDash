@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../generated/client";
+import type { Prisma, PrismaClient } from "../generated/client";
 import crypto from "crypto";
 import { hashTokenForStorage } from "../auth/tokenSecurity";
 import { isTrashCollectionId } from "../routes/dashboard/trash";
@@ -7,6 +7,29 @@ export type DrawingPermission = "view" | "edit";
 export type DrawingAccess = "none" | DrawingPermission | "owner";
 
 export type DrawingPrincipal = { kind: "user"; userId: string };
+
+// Custom fork: every newly created board is shared with all active users
+// (except its creator) with edit access. Uses the same DrawingPermission rows
+// as manual sharing, so they can be revoked or downgraded in the share dialog.
+export const grantEditToAllActiveUsers = async (
+  db: PrismaClient | Prisma.TransactionClient,
+  drawingId: string,
+  ownerUserId: string,
+): Promise<void> => {
+  const users = await db.user.findMany({
+    where: { isActive: true, id: { not: ownerUserId } },
+    select: { id: true },
+  });
+  if (users.length === 0) return;
+  await db.drawingPermission.createMany({
+    data: users.map((user) => ({
+      drawingId,
+      granteeUserId: user.id,
+      permission: "edit",
+      createdByUserId: ownerUserId,
+    })),
+  });
+};
 
 export const normalizeDrawingPermission = (
   input: unknown,

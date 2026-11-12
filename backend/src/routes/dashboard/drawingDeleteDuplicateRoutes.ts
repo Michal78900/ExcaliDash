@@ -1,5 +1,6 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
+import { grantEditToAllActiveUsers } from "../../authz/sharing";
 import { rewritePreviewForInternedFiles } from "../../fileProcessing";
 import {
   getUserTrashCollectionId,
@@ -109,21 +110,26 @@ export const registerDrawingDeleteDuplicateRoutes = (
         duplicatedFiles,
       );
 
-      const newDrawing = await prisma.drawing.create({
-        data: {
-          id: newDrawingId,
-          name: `${original.name} (Copy)`,
-          elements: original.elements,
-          appState: original.appState,
-          files: JSON.stringify(duplicatedFiles),
-          preview:
-            typeof duplicatedPreview === "string"
-              ? duplicatedPreview
-              : original.preview,
-          userId: req.user.id,
-          collectionId: duplicatedCollectionId,
-          version: 1,
-        },
+      const ownerUserId = req.user.id;
+      const newDrawing = await prisma.$transaction(async (tx) => {
+        const created = await tx.drawing.create({
+          data: {
+            id: newDrawingId,
+            name: `${original.name} (Copy)`,
+            elements: original.elements,
+            appState: original.appState,
+            files: JSON.stringify(duplicatedFiles),
+            preview:
+              typeof duplicatedPreview === "string"
+                ? duplicatedPreview
+                : original.preview,
+            userId: ownerUserId,
+            collectionId: duplicatedCollectionId,
+            version: 1,
+          },
+        });
+        await grantEditToAllActiveUsers(tx, newDrawingId, ownerUserId);
+        return created;
       });
       invalidateDrawingsCache();
 
