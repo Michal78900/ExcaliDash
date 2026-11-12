@@ -4,6 +4,7 @@ import { Prisma } from "../../generated/client";
 import {
   canEditDrawing,
   getDrawingAccess,
+  grantEditToAllActiveUsers,
   isOwnerAccess,
 } from "../../authz/sharing";
 import { rewritePreviewForInternedFiles } from "../../fileProcessing";
@@ -185,17 +186,22 @@ export const registerDrawingCreateUpdateRoutes = (
 
       let newDrawing;
       try {
-        newDrawing = await prisma.drawing.create({
-          data: {
-            id: newDrawingId,
-            name: drawingName,
-            elements: JSON.stringify(payload.elements),
-            appState: JSON.stringify(payload.appState),
-            userId: req.user.id,
-            collectionId: targetCollectionId,
-            preview: processedPreview,
-            files: JSON.stringify(processedFiles),
-          },
+        const ownerUserId = req.user.id;
+        newDrawing = await prisma.$transaction(async (tx) => {
+          const created = await tx.drawing.create({
+            data: {
+              id: newDrawingId,
+              name: drawingName,
+              elements: JSON.stringify(payload.elements),
+              appState: JSON.stringify(payload.appState),
+              userId: ownerUserId,
+              collectionId: targetCollectionId,
+              preview: processedPreview,
+              files: JSON.stringify(processedFiles),
+            },
+          });
+          await grantEditToAllActiveUsers(tx, newDrawingId, ownerUserId);
+          return created;
         });
       } catch (error) {
         await cleanupUnreferencedInternedFiles(
