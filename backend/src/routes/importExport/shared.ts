@@ -5,6 +5,7 @@ import JSZip from "jszip";
 import { z } from "zod";
 import { Prisma, PrismaClient } from "../../generated/client";
 import { sanitizeDrawingData } from "../../security";
+import { config } from "../../config";
 import { encodeSnapshotField } from "../../snapshots/snapshotCodec";
 
 export class ImportValidationError extends Error {
@@ -321,15 +322,17 @@ export const replaceImportedDrawing = async (
   },
   data: Prisma.DrawingUncheckedUpdateManyInput,
 ) => {
-  await tx.drawingSnapshot.create({
-    data: {
-      drawingId: existing.id,
-      version: existing.version,
-      elements: encodeSnapshotField(existing.elements),
-      appState: encodeSnapshotField(existing.appState),
-      files: encodeSnapshotField(existing.files),
-    },
-  });
+  if (config.snapshotsEnabled) {
+    await tx.drawingSnapshot.create({
+      data: {
+        drawingId: existing.id,
+        version: existing.version,
+        elements: encodeSnapshotField(existing.elements),
+        appState: encodeSnapshotField(existing.appState),
+        files: encodeSnapshotField(existing.files),
+      },
+    });
+  }
   const updated = await tx.drawing.updateMany({
     where: {
       id: existing.id,

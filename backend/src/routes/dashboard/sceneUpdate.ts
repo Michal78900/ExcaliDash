@@ -1,5 +1,6 @@
 import { storedFileFilter } from "../../drawingFileStore";
 import { Prisma, PrismaClient } from "../../generated/client";
+import { config } from "../../config";
 import { encodeSnapshotFieldAsync } from "../../snapshots/snapshotCodec";
 
 // A file entry is "blank" when it exists but carries no content (empty
@@ -129,6 +130,8 @@ type ApplySceneUpdateArgs = {
   parseJsonField: <T>(raw: string | null | undefined, fallback: T) => T;
   versionGuard: number | "optimistic";
   snapshotCompressionEnabled?: boolean;
+  // Version History snapshot of the pre-update scene. Defaults to SNAPSHOTS_ENABLED.
+  snapshotsEnabled?: boolean;
   maxRetries?: number;
   mutate: () => SceneMutation | Promise<SceneMutation>;
   resultSelect?: Prisma.DrawingSelect;
@@ -158,6 +161,7 @@ export const applySceneUpdateTx = async (
     parseJsonField,
     versionGuard,
     snapshotCompressionEnabled = true,
+    snapshotsEnabled = config.snapshotsEnabled,
     mutate,
     maxRetries = 0,
     resultSelect,
@@ -207,8 +211,12 @@ export const applySceneUpdateTx = async (
         // database by gigabytes per editing hour, so ordinary saves reuse a
         // snapshot younger than the interval. Saves that remove many live
         // elements still snapshot, so an accidental wipe stays restorable.
-        let takeSnapshot = true;
-        if (snapshotCoalescing && snapshotCoalescing.minIntervalMs > 0) {
+        let takeSnapshot = snapshotsEnabled;
+        if (
+          takeSnapshot &&
+          snapshotCoalescing &&
+          snapshotCoalescing.minIntervalMs > 0
+        ) {
           const now = Date.now();
           const recentSnapshot = await tx.drawingSnapshot.findFirst({
             where: {

@@ -12,6 +12,7 @@ export default defineConfig({
       DATABASE_URL: "file:./prisma/test.db",
       NODE_ENV: "test",
       AUTH_MODE: "local",
+      SNAPSHOTS_ENABLED: "true",
     },
     pool: "forks",
     forks: {

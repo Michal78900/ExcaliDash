@@ -66,6 +66,13 @@ export const serverEnv: readonly EnvVarSpec[] = [
     doc: "Positive values coalesce ordinary scene PUTs within this interval. Saves that remove more than 10% of live elements and history restores always snapshot. 0 snapshots every scene PUT.",
   },
   {
+    name: "SNAPSHOTS_ENABLED",
+    group: "Server",
+    kind: "boolean",
+    default: "false",
+    doc: "Store Version History snapshots on drawing saves (coalesced by SNAPSHOT_MIN_INTERVAL_SECONDS). When disabled no new snapshots are written, the history button is hidden, and existing snapshots are pruned by the hourly sweep.",
+  },
+  {
     name: "UPLOAD_MAX_MB",
     group: "Server",
     kind: "number",

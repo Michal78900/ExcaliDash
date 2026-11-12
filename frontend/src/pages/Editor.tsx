@@ -45,6 +45,7 @@ const ExcalidrawEditor: React.FC = () => {
     "none" | "view" | "edit" | "owner"
   >("none");
   const canEdit = accessLevel === "edit" || accessLevel === "owner";
+  const [historyEnabled, setHistoryEnabled] = useState(false);
   const [drawingName, setDrawingName] = useState(() =>
     typeof location.state?.drawingName === "string"
       ? location.state.drawingName
@@ -277,6 +278,7 @@ const ExcalidrawEditor: React.FC = () => {
     navigate,
     refs: sceneLoaderRefs,
     setAccessLevel,
+    setHistoryEnabled,
     setDrawingName,
     setInitialData,
     setIsReady,
@@ -375,6 +377,7 @@ const ExcalidrawEditor: React.FC = () => {
       <EditorView
         id={id}
         accessLevel={accessLevel}
+        historyEnabled={historyEnabled}
         autoHideEnabled={autoHideEnabled}
         autosaveFailing={autosaveFailing}
         canEdit={canEdit}

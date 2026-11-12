@@ -14,6 +14,8 @@ export interface Drawing extends DrawingSummary {
   elements: any[];
   appState: any;
   files: Record<string, any> | null;
+  // False when the server does not store Version History snapshots.
+  historyEnabled?: boolean;
 }
 export interface Collection {
   id: string;

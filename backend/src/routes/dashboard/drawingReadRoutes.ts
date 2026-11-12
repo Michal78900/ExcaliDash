@@ -1,5 +1,6 @@
 import express from "express";
 import { canViewDrawing, getDrawingAccess } from "../../authz/sharing";
+import { config } from "../../config";
 import { matchesIfNoneMatch } from "../../server/ifNoneMatch";
 import { toPublicTrashCollectionId } from "./trash";
 import type { DrawingRouteContext } from "./drawingRouteContext";
@@ -73,7 +74,7 @@ export const registerDrawingReadRoutes = (
       // Cheap validator instead of Express hashing a multi-MB body. Every
       // scene/name/collection write bumps updatedAt; access and preview mode
       // change the body too.
-      const etag = `W/"drawing-${id}-${drawing.version}-${drawing.updatedAt.getTime()}-${access}-${isOwner ? 1 : 0}-${omitPreview ? 1 : 0}"`;
+      const etag = `W/"drawing-${id}-${drawing.version}-${drawing.updatedAt.getTime()}-${access}-${isOwner ? 1 : 0}-${omitPreview ? 1 : 0}-${config.snapshotsEnabled ? 1 : 0}"`;
       res.setHeader("ETag", etag);
       res.setHeader("Cache-Control", "private, no-cache");
       if (matchesIfNoneMatch(req.headers["if-none-match"], etag)) {
@@ -100,6 +101,7 @@ export const registerDrawingReadRoutes = (
             : null,
           ...(omitPreview ? { hasPreview } : {}),
           accessLevel: access,
+          historyEnabled: config.snapshotsEnabled,
         },
         {
           elements: rawJsonArray(elements),
