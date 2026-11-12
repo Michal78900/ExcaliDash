@@ -317,8 +317,11 @@ const DashboardView: React.FC = () => {
           isSharedView={actions.isSharedView}
           isSharedCollection={actions.isSharedCollection}
           sharedRole={
-            actions.isSharedCollection
-              ? (actions.currentCollection?.sharedRole ?? undefined)
+            actions.isSharedCollection && actions.currentCollection?.sharedRole
+              ? // Co-owning a folder grants edit (not ownership) on its drawings.
+                actions.currentCollection.sharedRole === "owner"
+                ? "edit"
+                : actions.currentCollection.sharedRole
               : undefined
           }
           onClearSearch={clearSearch}

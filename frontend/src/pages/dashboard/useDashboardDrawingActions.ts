@@ -9,6 +9,7 @@ import { scopePreviewSvgIds } from "../../utils/previewSvg";
 
 const scopeDragPreview = (svg: string | undefined) =>
   svg ? scopePreviewSvgIds(svg, "drag-") : svg;
+import { canWriteCollection } from "../../utils/collectionAccess";
 
 type UseDashboardDrawingActionsParams = {
   listKey: string;
@@ -103,7 +104,7 @@ export const useDashboardDrawingActions = ({
 
   const handleCreateDrawing = async () => {
     if (isTrashView || isSharedView) return;
-    if (isSharedCollection && currentCollection?.sharedRole !== "edit") {
+    if (isSharedCollection && !canWriteCollection(currentCollection)) {
       handleViewerActionError("Viewers can't create new drawings");
       return;
     }
@@ -130,7 +131,7 @@ export const useDashboardDrawingActions = ({
 
   const handleImportDrawings = async (files: FileList | null) => {
     if (!files || isTrashView || isSharedView) return;
-    if (isSharedCollection && currentCollection?.sharedRole !== "edit") {
+    if (isSharedCollection && !canWriteCollection(currentCollection)) {
       handleViewerActionError("Viewers can't import drawings");
       return;
     }
@@ -344,8 +345,8 @@ export const useDashboardDrawingActions = ({
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    if (isSharedView) return;
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      if (isSharedView) return;
       const files = Array.from(event.dataTransfer.files);
       const libFiles = files.filter((file) =>
         file.name.endsWith(".excalidrawlib"),

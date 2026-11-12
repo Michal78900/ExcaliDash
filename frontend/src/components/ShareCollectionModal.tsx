@@ -27,6 +27,7 @@ export const ShareCollectionModal: React.FC<Props> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shares, setShares] = useState<CollectionShareRow[]>([]);
+  const [owner, setOwner] = useState<CollectionShareUser | null>(null);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CollectionShareUser[]>([]);
@@ -38,6 +39,7 @@ export const ShareCollectionModal: React.FC<Props> = ({
     try {
       const data = await api.getCollectionShares(collectionId);
       setShares(data.shares);
+      setOwner(data.owner ?? null);
     } catch (err: unknown) {
       let msg = "Failed to load sharing settings";
       if (api.isAxiosError(err)) {
@@ -81,6 +83,9 @@ export const ShareCollectionModal: React.FC<Props> = ({
       clearTimeout(t);
     };
   }, [query, collectionId, isOpen]);
+
+  // Until the owner is loaded, assume the viewer is the owner (the common case).
+  const ownerUser = owner ?? user;
 
   const handleAdd = async (u: CollectionShareUser) => {
     setIsLoading(true);
@@ -229,18 +234,20 @@ export const ShareCollectionModal: React.FC<Props> = ({
             </h3>
 
             <div className="space-y-0.5">
-              {/* Owner row */}
+              {/* Owner row (custom fork: the real owner, also when a co-owner opens this) */}
               <div className="flex items-center gap-3 px-1 py-1.5 min-h-[48px]">
-                <UserAvatar name={user?.name || "User"} size="sm" />
+                <UserAvatar name={ownerUser?.name || "User"} size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-bold text-slate-900 dark:text-neutral-100 leading-tight">
-                    {user?.name}{" "}
-                    <span className="text-slate-400 dark:text-neutral-500 font-semibold ml-1">
-                      (you)
-                    </span>
+                    {ownerUser?.name}{" "}
+                    {ownerUser?.id === user?.id && (
+                      <span className="text-slate-400 dark:text-neutral-500 font-semibold ml-1">
+                        (you)
+                      </span>
+                    )}
                   </div>
                   <div className="text-[10px] font-semibold text-slate-500 dark:text-neutral-400 mt-0.5">
-                    {user?.email}
+                    {ownerUser?.email}
                   </div>
                 </div>
                 <div className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 pr-4 shrink-0">
@@ -266,6 +273,11 @@ export const ShareCollectionModal: React.FC<Props> = ({
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold text-slate-900 dark:text-neutral-100 leading-tight truncate">
                       {s.granteeUser.name}
+                      {s.granteeUserId === user?.id && (
+                        <span className="text-slate-400 dark:text-neutral-500 font-semibold ml-1">
+                          (you)
+                        </span>
+                      )}
                     </div>
                     <div className="text-[10px] font-semibold text-slate-500 dark:text-neutral-400 mt-0.5 truncate">
                       {s.granteeUser.email}

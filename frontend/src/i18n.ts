@@ -11,6 +11,7 @@ const messages = {
     "sidebar.editor": "Editor",
     "sidebar.viewer": "Viewer",
     "sidebar.owner": "Owner",
+    "sidebar.coOwner": "Co-owner",
     "sidebar.deleteCollection": "Delete Collection",
     "sidebar.deleteCollectionMessage":
       "Are you sure you want to delete this collection? All drawings inside will be moved to Unorganized.",
@@ -33,6 +34,7 @@ const messages = {
     "sidebar.editor": "可编辑",
     "sidebar.viewer": "仅查看",
     "sidebar.owner": "所有者",
+    "sidebar.coOwner": "共同所有者",
     "sidebar.deleteCollection": "删除集合",
     "sidebar.deleteCollectionMessage":
       "确定要删除此集合吗？其中的所有绘图都将移至未整理。",

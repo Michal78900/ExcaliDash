@@ -1,4 +1,5 @@
 import React from "react";
+import { canWriteCollection } from "../../utils/collectionAccess";
 import {
   ArrowDown,
   ArrowUp,
@@ -85,7 +86,7 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
 }) => {
   const canModifySelection =
     !isSharedView &&
-    (!isSharedCollection || currentCollection?.sharedRole === "edit");
+    (!isSharedCollection || canWriteCollection(currentCollection));
 
   return (
     <div className="mb-6 flex flex-col items-stretch justify-between gap-3 lg:mb-8 2xl:flex-row 2xl:items-center">
@@ -229,7 +230,11 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
                       <Inbox size={14} /> Unorganized
                     </button>
                     {collections
-                      .filter((collection) => collection.id !== "trash")
+                      .filter(
+                        (collection) =>
+                          collection.id !== "trash" &&
+                          canWriteCollection(collection),
+                      )
                       .map((collection) => (
                         <button
                           key={collection.id}
@@ -267,7 +272,7 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
             onClick={() => {
               if (
                 isSharedCollection &&
-                currentCollection?.sharedRole !== "edit"
+                !canWriteCollection(currentCollection)
               ) {
                 onViewerActionError("Viewers can't import drawings");
                 return;
@@ -291,7 +296,7 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
             canCreate={() => {
               if (
                 isSharedCollection &&
-                currentCollection?.sharedRole !== "edit"
+                !canWriteCollection(currentCollection)
               ) {
                 onViewerActionError("Viewers can't create new drawings");
                 return false;

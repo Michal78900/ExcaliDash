@@ -31,6 +31,64 @@ export const grantEditToAllActiveUsers = async (
   });
 };
 
+// Custom fork: shared folders. A collection share role can also be "owner"
+// (co-owner: may rename the folder and manage its shares, but not delete it).
+export type CollectionRole = "view" | "edit" | "owner";
+
+export const normalizeCollectionRole = (
+  input: unknown,
+): CollectionRole | null => {
+  if (input === "view" || input === "edit" || input === "owner") return input;
+  return null;
+};
+
+// Effective role of a user in a collection: "owner" for the real owner,
+// otherwise the role from CollectionShare, or null without access.
+export const getCollectionRole = async (
+  db: PrismaClient | Prisma.TransactionClient,
+  collectionId: string,
+  userId: string,
+): Promise<CollectionRole | null> => {
+  const collection = await db.collection.findUnique({
+    where: { id: collectionId },
+    select: { userId: true },
+  });
+  if (!collection) return null;
+  if (collection.userId === userId) return "owner";
+  // Another user's trash is never shared or fileable.
+  if (isTrashCollectionId(collectionId, collection.userId)) return null;
+  const share = await db.collectionShare.findUnique({
+    where: { collectionId_granteeUserId: { collectionId, granteeUserId: userId } },
+    select: { role: true },
+  });
+  return normalizeCollectionRole(share?.role);
+};
+
+export const canFileIntoCollection = (role: CollectionRole | null): boolean =>
+  role === "edit" || role === "owner";
+
+// Custom fork: every newly created collection is shared with all active users
+// (except its creator) with edit access, like new boards.
+export const grantCollectionEditToAllActiveUsers = async (
+  db: PrismaClient | Prisma.TransactionClient,
+  collectionId: string,
+  ownerUserId: string,
+): Promise<void> => {
+  const users = await db.user.findMany({
+    where: { isActive: true, id: { not: ownerUserId } },
+    select: { id: true },
+  });
+  if (users.length === 0) return;
+  await db.collectionShare.createMany({
+    data: users.map((user) => ({
+      collectionId,
+      granteeUserId: user.id,
+      role: "edit",
+      createdByUserId: ownerUserId,
+    })),
+  });
+};
+
 export const normalizeDrawingPermission = (
   input: unknown,
 ): DrawingPermission | null => {
@@ -101,28 +159,18 @@ export const getDrawingAccessDetails = async (
 
     // A drawing inherits the strongest access available from its collection.
     // This matters when a direct drawing grant is weaker than the collection grant.
+    // Custom fork: owning (or co-owning) the collection grants at most "edit".
+    // Editors may file other people's drawings into their own folders, so
+    // folder ownership must not escalate to drawing ownership.
     if (drawing.collectionId) {
-      const ownedCollection = await params.prisma.collection.findFirst({
-        where: {
-          id: drawing.collectionId,
-          userId: params.principal.userId,
-        },
-        select: { id: true },
-      });
-      if (ownedCollection) {
-        baseAccess = "owner";
-      } else {
-        const collectionShare = await params.prisma.collectionShare.findFirst({
-          where: {
-            collectionId: drawing.collectionId,
-            granteeUserId: params.principal.userId,
-          },
-          select: { role: true },
-        });
-        const collectionAccess =
-          normalizeDrawingPermission(collectionShare?.role) ?? "none";
-        baseAccess = maxAccess(baseAccess, collectionAccess);
-      }
+      const role = await getCollectionRole(
+        params.prisma,
+        drawing.collectionId,
+        params.principal.userId,
+      );
+      const collectionAccess: DrawingAccess =
+        role === "owner" ? "edit" : (role ?? "none");
+      baseAccess = maxAccess(baseAccess, collectionAccess);
     }
   }
 

@@ -336,6 +336,9 @@ export const registerDrawingListRoutes = (
             d."collectionId" IS NULL OR (
               d."collectionId" NOT IN (${LEGACY_TRASH_COLLECTION_ID}, ${TRASH_COLLECTION_PREFIX} || d."userId")
               AND c."id" IS NOT NULL
+              -- Custom fork: shared folders. Other people's drawings filed into a
+              -- collection this user owns are listed in that collection instead.
+              AND c."userId" <> ${userId}
               AND NOT EXISTS (
                 SELECT 1 FROM "CollectionShare" cs
                 WHERE cs."collectionId" = c."id" AND cs."granteeUserId" = ${userId}

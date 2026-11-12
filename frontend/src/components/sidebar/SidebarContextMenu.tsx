@@ -64,16 +64,22 @@ export const SidebarContextMenu: React.FC<SidebarContextMenuProps> = ({
           >
             <Edit2 size={14} /> Rename Collection
           </button>
-          <div className="ui-menu-separator" />
-          <button
-            onClick={() => {
-              onDeleteCollection(contextMenu.id!);
-              onClose();
-            }}
-            className="ui-menu-item ui-menu-item-danger"
-          >
-            <Trash2 size={14} /> Delete Collection
-          </button>
+          {/* Custom fork: co-owners can rename and share, only the owner deletes. */}
+          {collections.find((c) => c.id === contextMenu.id)?.isOwner !==
+          false ? (
+            <>
+              <div className="ui-menu-separator" />
+              <button
+                onClick={() => {
+                  onDeleteCollection(contextMenu.id!);
+                  onClose();
+                }}
+                className="ui-menu-item ui-menu-item-danger"
+              >
+                <Trash2 size={14} /> Delete Collection
+              </button>
+            </>
+          ) : null}
         </>
       ) : (
         <button

@@ -13,6 +13,10 @@ import {
 } from "lucide-react";
 import type { Collection, DrawingSummary } from "../../types";
 import { CollectionMoveOptions } from "./CollectionMoveOptions";
+import {
+  canMoveDrawing,
+  getMoveTargetCollections,
+} from "../../utils/collectionAccess";
 
 interface DrawingCardContextMenuProps {
   drawing: DrawingSummary;
@@ -103,7 +107,7 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
             <PenTool size={14} /> Rename
           </button>
         ) : null}
-        {!isShared ? (
+        {canMoveDrawing(drawing, isShared) ? (
           <div
             className="relative"
             onMouseEnter={openSubmenu}
@@ -129,7 +133,7 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
                   onMouseLeave={scheduleSubmenuClose}
                 >
                   <CollectionMoveOptions
-                    collections={collections}
+                    collections={getMoveTargetCollections(collections, drawing, isShared)}
                     currentCollectionId={drawing.collectionId}
                     drawingId={drawing.id}
                     onMoveToCollection={onMoveToCollection}

@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from "uuid";
 import { Prisma } from "../../generated/client";
 import {
   canEditDrawing,
+  canFileIntoCollection,
+  getCollectionRole,
   getDrawingAccess,
   grantEditToAllActiveUsers,
   isOwnerAccess,
@@ -148,18 +150,15 @@ export const registerDrawingCreateUpdateRoutes = (
         if (!collection)
           return res.status(404).json({ error: "Collection not found" });
 
+        // If the collection belongs to someone else, check the user has editor
+        // (or co-owner) access.
         if (collection.userId !== req.user.id) {
-          if (isTrashCollectionId(collection.id, collection.userId)) {
-            return res.status(404).json({ error: "Collection not found" });
-          }
-          const share = await prisma.collectionShare.findFirst({
-            where: {
-              collectionId: targetCollectionId,
-              granteeUserId: req.user.id,
-              role: "edit",
-            },
-          });
-          if (!share)
+          const role = await getCollectionRole(
+            prisma,
+            targetCollectionId,
+            req.user.id,
+          );
+          if (!canFileIntoCollection(role))
             return res
               .status(403)
               .json({ error: "No edit access to this collection" });
@@ -254,7 +253,7 @@ export const registerDrawingCreateUpdateRoutes = (
 
       const existingDrawing = await prisma.drawing.findUnique({
         where: { id },
-        select: { userId: true, version: true },
+        select: { userId: true, version: true, collectionId: true },
       });
       if (!existingDrawing)
         return res.status(404).json({ error: "Drawing not found" });
@@ -355,46 +354,62 @@ export const registerDrawingCreateUpdateRoutes = (
       }
 
       if (payload.collectionId !== undefined) {
-        if (!isOwnerAccess(access)) {
-          return res.status(403).json({
-            error: "Forbidden",
-            message: "Only the owner can move drawings between collections",
-          });
-        }
-        if (payload.collectionId === "trash") {
-          await ensureTrashCollection(prisma, ownerUserId);
-          (data as Prisma.DrawingUncheckedUpdateInput).collectionId =
-            trashCollectionId;
-        } else if (payload.collectionId) {
-          const ownedCollection = await prisma.collection.findFirst({
-            where: { id: payload.collectionId, userId: actingUserId },
-          });
-          if (!ownedCollection) {
-            const editableShare = await prisma.collectionShare.findFirst({
-              where: {
-                collectionId: payload.collectionId,
-                granteeUserId: actingUserId,
-                role: "edit",
-              },
-              select: {
-                id: true,
-                collection: { select: { id: true, userId: true } },
-              },
-            });
-            if (
-              !editableShare ||
-              isTrashCollectionId(
-                editableShare.collection.id,
-                editableShare.collection.userId,
-              )
-            ) {
-              return res.status(404).json({ error: "Collection not found" });
+        // Custom fork: shared folders. Anyone who can edit the drawing may file
+        // it into a collection they own, co-own or can edit. Non-owners cannot
+        // trash it, nor pull it out of a folder they have no write access to.
+        const isDrawingOwner = isOwnerAccess(access);
+        const isSignedInUser = principal?.kind === "user";
+        const currentCollectionId = existingDrawing.collectionId;
+        const requestedInternalId =
+          payload.collectionId === "trash"
+            ? trashCollectionId
+            : payload.collectionId;
+        const isNoop = requestedInternalId === currentCollectionId;
+
+        if (!isNoop) {
+          if (!isDrawingOwner) {
+            const forbidden = (message: string) =>
+              res.status(403).json({ error: "Forbidden", message });
+            if (!isSignedInUser) {
+              return forbidden(
+                "Only signed-in editors can move drawings between collections",
+              );
+            }
+            if (payload.collectionId === "trash") {
+              return forbidden("Only the owner can move a drawing to trash");
+            }
+            if (currentCollectionId) {
+              const currentRole = await getCollectionRole(
+                prisma,
+                currentCollectionId,
+                actingUserId,
+              );
+              if (!canFileIntoCollection(currentRole)) {
+                return forbidden(
+                  "No edit access to the drawing's current collection",
+                );
+              }
             }
           }
-          (data as Prisma.DrawingUncheckedUpdateInput).collectionId =
-            payload.collectionId;
-        } else {
-          (data as Prisma.DrawingUncheckedUpdateInput).collectionId = null;
+
+          if (payload.collectionId === "trash") {
+            await ensureTrashCollection(prisma, ownerUserId);
+            (data as Prisma.DrawingUncheckedUpdateInput).collectionId =
+              trashCollectionId;
+          } else if (payload.collectionId) {
+            const targetRole = await getCollectionRole(
+              prisma,
+              payload.collectionId,
+              actingUserId,
+            );
+            if (!canFileIntoCollection(targetRole)) {
+              return res.status(404).json({ error: "Collection not found" });
+            }
+            (data as Prisma.DrawingUncheckedUpdateInput).collectionId =
+              payload.collectionId;
+          } else {
+            (data as Prisma.DrawingUncheckedUpdateInput).collectionId = null;
+          }
         }
       }
 
