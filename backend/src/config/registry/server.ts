@@ -59,6 +59,13 @@ export const serverEnv: readonly EnvVarSpec[] = [
     doc: "Number of days to retain drawing snapshots before the hourly sweep prunes them.",
   },
   {
+    name: "SNAPSHOTS_ENABLED",
+    group: "Server",
+    kind: "boolean",
+    default: "false",
+    doc: "Store a Version History snapshot on every drawing save. When disabled no new snapshots are written, the history button is hidden, and existing snapshots are pruned by the hourly sweep.",
+  },
+  {
     name: "UPLOAD_MAX_MB",
     group: "Server",
     kind: "number",

@@ -26,6 +26,7 @@ import type { Peer } from "./useEditorCollaboration";
 type EditorViewProps = {
   id?: string;
   accessLevel: "none" | "view" | "edit" | "owner";
+  historyEnabled: boolean;
   autoHideEnabled: boolean;
   autosaveFailing: boolean;
   canEdit: boolean;
@@ -130,6 +131,7 @@ const CollaboratorAvatar = ({
 export const EditorView: React.FC<EditorViewProps> = ({
   id,
   accessLevel,
+  historyEnabled,
   autoHideEnabled,
   autosaveFailing,
   canEdit,
@@ -240,7 +242,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
             Read-only
           </span>
         ) : null}
-        {canEdit && id ? (
+        {canEdit && id && historyEnabled ? (
           <button
             ref={historyButtonRef}
             onClick={onHistoryOpen}

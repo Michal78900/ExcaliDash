@@ -1,5 +1,6 @@
 import express from "express";
 import { canViewDrawing, getDrawingAccess } from "../../authz/sharing";
+import { config } from "../../config";
 import { toPublicTrashCollectionId } from "./trash";
 import type { DrawingRouteContext } from "./drawingRouteContext";
 
@@ -56,6 +57,7 @@ export const registerDrawingReadRoutes = (
         appState: parseJsonField(drawing.appState, {}),
         files: parseJsonField(drawing.files, {}),
         accessLevel: access,
+        historyEnabled: config.snapshotsEnabled,
       });
     }),
   );

@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from "../../generated/client";
+import { config } from "../../config";
 import { encodeSnapshotField } from "../../snapshots/snapshotCodec";
 
 // A file entry is "blank" when it exists but carries no content (empty
@@ -64,6 +65,8 @@ type ApplySceneUpdateArgs = {
   parseJsonField: <T>(raw: string | null | undefined, fallback: T) => T;
   versionGuard: number | "optimistic";
   snapshotCompressionEnabled?: boolean;
+  // Version History snapshot of the pre-update scene. Defaults to SNAPSHOTS_ENABLED.
+  snapshotsEnabled?: boolean;
   maxRetries?: number;
   mutate: (current: DrawingRow) => SceneMutation | Promise<SceneMutation>;
 };
@@ -82,6 +85,7 @@ export const applySceneUpdateTx = async (
     parseJsonField,
     versionGuard,
     snapshotCompressionEnabled = true,
+    snapshotsEnabled = config.snapshotsEnabled,
     mutate,
     maxRetries = 0,
   } = args;
@@ -119,24 +123,26 @@ export const applySceneUpdateTx = async (
           }
         }
 
-        await tx.drawingSnapshot.create({
-          data: {
-            drawingId,
-            version: current.version,
-            elements: encodeSnapshotField(
-              current.elements,
-              snapshotCompressionEnabled,
-            ),
-            appState: encodeSnapshotField(
-              current.appState,
-              snapshotCompressionEnabled,
-            ),
-            files: encodeSnapshotField(
-              current.files,
-              snapshotCompressionEnabled,
-            ),
-          },
-        });
+        if (snapshotsEnabled) {
+          await tx.drawingSnapshot.create({
+            data: {
+              drawingId,
+              version: current.version,
+              elements: encodeSnapshotField(
+                current.elements,
+                snapshotCompressionEnabled,
+              ),
+              appState: encodeSnapshotField(
+                current.appState,
+                snapshotCompressionEnabled,
+              ),
+              files: encodeSnapshotField(
+                current.files,
+                snapshotCompressionEnabled,
+              ),
+            },
+          });
+        }
 
         const writeData: Prisma.DrawingUpdateInput = {
           ...mutation.data,

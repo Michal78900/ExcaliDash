@@ -76,6 +76,7 @@ interface Config {
   csrfMaxRequests: number;
   csrfRateLimitWindowMs: number;
   snapshotRetentionMs: number;
+  snapshotsEnabled: boolean;
   uploadMaxBytes: number;
   bodyLimitMb: number;
   fileUploadMaxMb: number;
@@ -353,6 +354,7 @@ export const config: Config = {
   csrfRateLimitWindowMs: readNumber("CSRF_RATE_LIMIT_WINDOW_MS", 60000),
   snapshotRetentionMs:
     readNumber("SNAPSHOT_RETENTION_DAYS", 2) * 24 * 60 * 60 * 1000,
+  snapshotsEnabled: readBoolean("SNAPSHOTS_ENABLED", false),
   uploadMaxBytes: readNumber("UPLOAD_MAX_MB", 100) * 1024 * 1024,
   bodyLimitMb: readNumber("BODY_LIMIT_MB", 50),
   fileUploadMaxMb,

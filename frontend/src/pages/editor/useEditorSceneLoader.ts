@@ -38,6 +38,7 @@ type SceneLoaderParams = {
     hasHydratedInitialScene: MutableRefObject<boolean>;
   };
   setAccessLevel: (accessLevel: AccessLevel) => void;
+  setHistoryEnabled: (enabled: boolean) => void;
   setDrawingName: (name: string) => void;
   setInitialData: (data: any) => void;
   setIsReady: (ready: boolean) => void;
@@ -73,6 +74,7 @@ export const useEditorSceneLoader = ({
   navigate,
   refs,
   setAccessLevel,
+  setHistoryEnabled,
   setDrawingName,
   setInitialData,
   setIsReady,
@@ -148,6 +150,7 @@ export const useEditorSceneLoader = ({
             ? data.accessLevel
             : "owner",
         );
+        setHistoryEnabled(data.historyEnabled === true);
         const rawElements = data.elements || [];
         // Paint first, stream images in. In S3 (or db-ref) mode the loaded
         // files carry `/api/files/...` (or public S3) references rather than
@@ -310,6 +313,7 @@ export const useEditorSceneLoader = ({
     refs,
     resetRefs,
     setAccessLevel,
+    setHistoryEnabled,
     setDrawingName,
     setInitialData,
     setIsReady,
