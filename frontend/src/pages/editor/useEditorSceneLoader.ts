@@ -61,11 +61,16 @@ type SceneLoaderParams = {
   ) => readonly any[];
 };
 
+// Excalidraw defaults to 2 ("bold"); open boards with the thin stroke (1)
+// instead. Not persisted, so every load starts thin.
+const DEFAULT_STROKE_WIDTH = 1;
+
 const buildEmptyScene = () => ({
   elements: [],
   appState: {
     viewBackgroundColor: "#ffffff",
     gridSize: null,
+    currentItemStrokeWidth: DEFAULT_STROKE_WIDTH,
     collaborators: new Map(),
   },
   files: {},
@@ -189,6 +194,7 @@ export const useEditorSceneLoader = ({
         const persistedAppState = getPersistedAppState(data.appState || {});
         const hydratedAppState = {
           ...persistedAppState,
+          currentItemStrokeWidth: DEFAULT_STROKE_WIDTH,
           collaborators: new Map(),
         };
         refs.latestAppState.current = hydratedAppState;
