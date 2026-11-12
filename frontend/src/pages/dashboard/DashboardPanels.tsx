@@ -199,7 +199,14 @@ export const DrawingsGrid: React.FC<DrawingsGridProps> = ({
         drawings.map((drawing) => {
           const cardDrawing =
             isSharedCollection && currentCollection?.sharedRole
-              ? { ...drawing, accessLevel: currentCollection.sharedRole }
+              ? {
+                  ...drawing,
+                  // Co-owning a folder grants edit (not ownership) on its drawings.
+                  accessLevel:
+                    currentCollection.sharedRole === "owner"
+                      ? ("edit" as const)
+                      : currentCollection.sharedRole,
+                }
               : drawing;
           return (
             <DrawingCard

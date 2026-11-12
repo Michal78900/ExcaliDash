@@ -48,8 +48,14 @@ export const updateLibrary = async (
 
 export const getCollectionShares = async (
   collectionId: string,
-): Promise<{ shares: CollectionShareRow[] }> => {
-  const response = await api.get<{ shares: CollectionShareRow[] }>(
+): Promise<{
+  shares: CollectionShareRow[];
+  owner: CollectionShareUser | null;
+}> => {
+  const response = await api.get<{
+    shares: CollectionShareRow[];
+    owner: CollectionShareUser | null;
+  }>(
     `/collections/${collectionId}/shares`,
   );
   return response.data;

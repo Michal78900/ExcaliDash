@@ -318,7 +318,16 @@ export const registerDrawingListRoutes = (
         where: { granteeUserId: req.user.id },
         select: { collectionId: true },
       });
-      const sharedColIds = sharedCollectionIds.map((s) => s.collectionId);
+      // Custom fork: shared folders. Other people's drawings filed into a
+      // collection this user owns are listed in that collection instead.
+      const ownedCollections = await prisma.collection.findMany({
+        where: { userId: req.user.id },
+        select: { id: true },
+      });
+      const sharedColIds = [
+        ...sharedCollectionIds.map((s) => s.collectionId),
+        ...ownedCollections.map((c) => c.id),
+      ];
 
       const whereDrawing: Prisma.DrawingWhereInput = {
         // "Shared with me" should only include drawings owned by someone else.
@@ -331,8 +340,8 @@ export const registerDrawingListRoutes = (
             hidden: false,
           },
         },
-        // Exclude drawings already accessible via a shared collection. A bare
-        // NOT IN would also drop drawings outside any collection (NULL).
+        // Exclude drawings already accessible via a shared (or owned) collection.
+        // Explicit null branch: SQL `NOT IN` is never true for a NULL column.
         ...(sharedColIds.length > 0 && {
           OR: [
             { collectionId: null },

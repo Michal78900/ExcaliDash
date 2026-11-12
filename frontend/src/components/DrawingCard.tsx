@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { PenTool, Check, Clock } from "lucide-react";
 import type { DrawingSummary, Collection } from "../types";
+import { canMoveDrawing } from "../utils/collectionAccess";
 import { formatDistanceToNow } from "date-fns";
 import clsx from "clsx";
 import { exportDrawingToFile } from "../utils/exportUtils";
@@ -115,6 +116,9 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
     };
   }, [drawing.id, isShared, isTrash]);
 
+  // Custom fork: editors may drag shared drawings into folders they can write to.
+  const canMove = canMoveDrawing(drawing, isShared);
+
   const handleExport = useCallback(async () => {
     try {
       setIsExporting(true);
@@ -167,13 +171,13 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
       <div
         id={`drawing-card-${drawing.id}`}
         onContextMenu={handleContextMenu}
-        draggable={!isRenaming && !isShared}
+        draggable={!isRenaming && canMove}
         onDragStart={(e) => {
           if (isRenaming) {
             e.preventDefault();
             return;
           }
-          if (isShared) {
+          if (!canMove) {
             e.preventDefault();
             return;
           }

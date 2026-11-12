@@ -9,6 +9,7 @@ const ROLE_OPTIONS: {
 }[] = [
   { label: "Viewer", value: "view" },
   { label: "Editor", value: "edit" },
+  { label: "Co-owner", value: "owner" },
 ];
 
 export const RoleSelect: React.FC<{

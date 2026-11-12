@@ -8,6 +8,7 @@ import {
   Users,
 } from "lucide-react";
 import type { Collection } from "../types";
+import { canManageCollection } from "../utils/collectionAccess";
 import clsx from "clsx";
 import { ConfirmModal } from "./ConfirmModal";
 import { ShareCollectionModal } from "./ShareCollectionModal";
@@ -81,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     e.preventDefault();
     e.stopPropagation();
     const collection = collections.find((c) => c.id === id);
-    if (!collection?.isOwner && collection?.isOwner !== undefined) return;
+    if (collection && !canManageCollection(collection)) return;
     setContextMenu({ x: e.clientX, y: e.clientY, type: "item", id });
   };
   const handleBackgroundContextMenu = (e: React.MouseEvent) => {
@@ -213,6 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   isActive={selectedCollectionId === collection.id}
                   onClick={() => onSelectCollection(collection.id)}
                   onDoubleClick={() => {
+                    if (!canManageCollection(collection)) return;
                     setEditingId(collection.id);
                     setEditName(collection.name);
                   }}
@@ -236,14 +238,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <span
                           className={clsx(
                             "shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold",
-                            collection.sharedRole === "edit"
+                            collection.sharedRole === "owner"
+                              ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
+                              : collection.sharedRole === "edit"
                               ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
                               : "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800",
                           )}
                         >
-                          {collection.sharedRole === "edit"
-                            ? t("sidebar.editor")
-                            : t("sidebar.viewer")}
+                          {collection.sharedRole === "owner"
+                            ? t("sidebar.coOwner")
+                            : collection.sharedRole === "edit"
+                              ? t("sidebar.editor")
+                              : t("sidebar.viewer")}
                         </span>
                       )}
                     </div>

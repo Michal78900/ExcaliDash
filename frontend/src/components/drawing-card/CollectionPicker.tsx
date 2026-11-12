@@ -3,6 +3,10 @@ import clsx from "clsx";
 import type { Collection, DrawingSummary } from "../../types";
 import { CollectionMoveOptions } from "./CollectionMoveOptions";
 import { useAuth } from "../../context/AuthContext";
+import {
+  canMoveDrawing,
+  getMoveTargetCollections,
+} from "../../utils/collectionAccess";
 
 interface CollectionPickerProps {
   drawing: DrawingSummary;
@@ -29,6 +33,8 @@ export const CollectionPicker: React.FC<CollectionPickerProps> = ({
   const showOwner = Boolean(
     user && drawing.userId && drawing.userId !== user.id,
   );
+  // Custom fork: editors may file shared drawings into folders they can write to.
+  const canMove = canMoveDrawing(drawing, isShared);
   const collectionName = drawing.collectionId
     ? collections.find((collection) => collection.id === drawing.collectionId)
         ?.name || "Collection"
@@ -40,29 +46,31 @@ export const CollectionPicker: React.FC<CollectionPickerProps> = ({
         <div className="relative">
           <button
             onClick={() => {
-              if (isShared || isSharedCollection) return;
+              if (!canMove) return;
               onToggle();
             }}
             data-testid={`collection-picker-${drawing.id}`}
             aria-haspopup="listbox"
             aria-expanded={isOpen}
-            disabled={isShared || isSharedCollection}
+            disabled={!canMove}
             className={clsx(
               "max-w-[120px] truncate rounded-md border px-2 py-0.5 text-[10px] font-semibold transition-all",
-              isShared || isSharedCollection
+              !canMove
                 ? "bg-slate-50 dark:bg-neutral-800/40 text-slate-400 dark:text-neutral-500 border-neutral-100 dark:border-neutral-800 cursor-not-allowed"
                 : "bg-slate-50 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 cursor-pointer border-neutral-200/60 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700/50",
             )}
           >
-            {isShared ? "Shared" : collectionName}
+            {isShared && !isSharedCollection && !drawing.collectionId
+              ? "Shared"
+              : collectionName}
           </button>
 
-          {!isShared && isOpen && (
+          {canMove && isOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={onClose} />
               <div className="ui-menu absolute left-0 xs:left-auto xs:right-0 bottom-full mb-1.5 w-48 z-20 max-h-56 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-bottom-2 duration-150">
                 <CollectionMoveOptions
-                  collections={collections}
+                  collections={getMoveTargetCollections(collections, drawing, isShared)}
                   currentCollectionId={drawing.collectionId}
                   drawingId={drawing.id}
                   onMoveToCollection={onMoveToCollection}

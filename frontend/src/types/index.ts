@@ -21,12 +21,12 @@ export interface Collection {
   id: string;
   name: string;
   createdAt: number;
-  sharedRole?: "view" | "edit" | null;
+  sharedRole?: "view" | "edit" | "owner" | null;
   isOwner?: boolean;
   isShared?: boolean;
 }
 
-export type CollectionShareRole = "view" | "edit";
+export type CollectionShareRole = "view" | "edit" | "owner";
 
 export interface CollectionShareUser {
   id: string;
