@@ -103,3 +103,32 @@ export const mergeSceneElements = (
   }
   return merged;
 };
+
+// Custom fork: drop deleted-element tombstones older than `retentionMs`.
+//
+// Excalidraw never removes a deleted element; it keeps it with
+// `isDeleted: true` so the deletion wins over older copies when scenes merge.
+// Long sessions with pen + eraser pile these up and every save, load and merge
+// gets slower. Like excalidraw.com (DELETED_ELEMENT_TIMEOUT, 24 h), tombstones
+// whose last change (`updated`, epoch ms) is older than the window are dropped.
+// Edits made offline still win, since they carry a higher version anyway; only
+// a client that kept a stale, undeleted copy for longer than the window could
+// bring the element back. Elements without a numeric `updated` are kept.
+export const pruneDeletedElements = <T>(
+  elements: readonly T[],
+  retentionMs: number,
+  now: number = Date.now(),
+): T[] => {
+  if (!(retentionMs > 0)) return [...elements];
+  const cutoff = now - retentionMs;
+  return elements.filter((element) => {
+    if (!element || typeof element !== "object") return true;
+    const { isDeleted, updated } = element as SceneElement;
+    if (isDeleted !== true) return true;
+    return !(
+      typeof updated === "number" &&
+      Number.isFinite(updated) &&
+      updated < cutoff
+    );
+  });
+};

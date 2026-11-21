@@ -23,7 +23,8 @@ import {
   countLiveElements,
   isVersionConflict,
 } from "./sceneUpdate";
-import { mergeSceneElements } from "./sceneMerge";
+import { config as appConfig } from "../../config";
+import { mergeSceneElements, pruneDeletedElements } from "./sceneMerge";
 import { collectRetainedDrawingFileIds } from "../storage/retainedFiles";
 import {
   prefersMinimalReturn,
@@ -443,9 +444,12 @@ export const registerDrawingCreateUpdateRoutes = (
                   ? {
                       ...data,
                       elements: JSON.stringify(
-                        mergeSceneElements(
-                          parseJsonField<unknown[]>(current.elements, []),
-                          payload.elements,
+                        pruneDeletedElements(
+                          mergeSceneElements(
+                            parseJsonField<unknown[]>(current.elements, []),
+                            payload.elements,
+                          ),
+                          appConfig.deletedElementRetentionMs,
                         ),
                       ),
                     }

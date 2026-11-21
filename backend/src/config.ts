@@ -80,6 +80,7 @@ interface Config {
   snapshotRetentionMs: number;
   snapshotMinIntervalMs: number;
   snapshotsEnabled: boolean;
+  deletedElementRetentionMs: number;
   uploadMaxBytes: number;
   bodyLimitMb: number;
   fileUploadMaxMb: number;
@@ -362,6 +363,13 @@ export const config: Config = {
   snapshotMinIntervalMs:
     readNonNegativeNumber("SNAPSHOT_MIN_INTERVAL_SECONDS", 0) * 1000,
   snapshotsEnabled: readBoolean("SNAPSHOTS_ENABLED", false),
+  // Custom fork: hours to keep deleted-element tombstones in saved scenes;
+  // 0 disables pruning.
+  deletedElementRetentionMs:
+    readNonNegativeNumber("DELETED_ELEMENT_RETENTION_HOURS", 24) *
+    60 *
+    60 *
+    1000,
   uploadMaxBytes: readNumber("UPLOAD_MAX_MB", 100) * 1024 * 1024,
   bodyLimitMb: readNumber("BODY_LIMIT_MB", 50),
   fileUploadMaxMb,

@@ -421,6 +421,23 @@ const isCrossOriginApi = (): boolean => {
   }
 };
 
+// Custom fork: deleted elements stay in the editor scene as tombstones. Ones
+// older than a day (excalidraw.com's DELETED_ELEMENT_TIMEOUT) are not sent
+// again with an autosave: the server drops them from the stored scene anyway.
+const DELETED_ELEMENT_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+
+const withoutExpiredTombstones = (elements: readonly any[]): any[] => {
+  const cutoff = Date.now() - DELETED_ELEMENT_TIMEOUT_MS;
+  return elements.filter(
+    (element) =>
+      !(
+        element?.isDeleted === true &&
+        typeof element.updated === "number" &&
+        element.updated < cutoff
+      ),
+  );
+};
+
 /** Save a scene and request only the resulting metadata. */
 // Custom fork: `autosave: true` (sent without `version`) makes the server merge
 // the elements into the stored scene, so a collaborator's save in between no
@@ -430,7 +447,11 @@ export const saveDrawing = async (
   data: Partial<Drawing> & { expectedVersion?: number; autosave?: boolean },
   options?: { socketId?: string | null },
 ): Promise<DrawingSaveResult> => {
-  const json = JSON.stringify(data);
+  const json = JSON.stringify(
+    data.autosave === true && Array.isArray(data.elements)
+      ? { ...data, elements: withoutExpiredTombstones(data.elements) }
+      : data,
+  );
   const put = (body: Blob | string, headers: Record<string, string> = {}) =>
     api.put<unknown>(`/drawings/${id}`, body, {
       headers: { "Content-Type": "application/json", ...headers },

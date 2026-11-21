@@ -73,6 +73,13 @@ export const serverEnv: readonly EnvVarSpec[] = [
     doc: "Store Version History snapshots on drawing saves (coalesced by SNAPSHOT_MIN_INTERVAL_SECONDS). When disabled no new snapshots are written, the history button is hidden, and existing snapshots are pruned by the hourly sweep.",
   },
   {
+    name: "DELETED_ELEMENT_RETENTION_HOURS",
+    group: "Server",
+    kind: "number",
+    default: "24",
+    doc: "Hours to keep deleted elements (tombstones) in a drawing's scene. Editor autosaves drop tombstones older than this, like excalidraw.com does after 24 hours. 0 keeps them forever.",
+  },
+  {
     name: "UPLOAD_MAX_MB",
     group: "Server",
     kind: "number",
