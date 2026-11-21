@@ -75,6 +75,9 @@ const getSocketUrl = () =>
       import.meta.env.VITE_DEV_BACKEND_URL ||
       "http://localhost:8000";
 
+// Long enough to cover a peer's 1 s autosave debounce plus save retries.
+const SCENE_SAVED_CATCHUP_WINDOW_MS = 15_000;
+
 type RoomJoinSocket = Pick<Socket, "connected" | "emit" | "on" | "off">;
 
 export const bindRoomJoin = (
@@ -700,8 +703,44 @@ export const useEditorCollaboration = ({
       catchupGeneration += 1;
     };
     socket.on("disconnect", invalidateCatchup);
+    // Custom fork: after an autosave the server only sends a short
+    // `scene-saved` notice (upstream sends the whole scene to everyone). It
+    // carries the committed version and the small persisted appState
+    // (background/grid), applied like upstream's saved-scene broadcast. An
+    // edit made just before we joined reached neither our live socket nor our
+    // join-time read, so re-read the scene on notices shortly after joining.
+    let joinedAtMs = 0;
+    socket.on(
+      "scene-saved",
+      (payload: {
+        drawingId?: string;
+        version?: number;
+        appState?: Record<string, unknown>;
+      }) => {
+        if (payload?.drawingId !== drawingId) return;
+        const { version } = payload;
+        if (typeof version === "number" && Number.isInteger(version)) {
+          const highestKnownVersion = Math.max(
+            currentDrawingVersionRef?.current ?? -1,
+            pendingRemoteVersionRef.current ?? -1,
+          );
+          if (version > highestKnownVersion) {
+            pendingRemoteVersionRef.current = version;
+            const persistedAppState = pickPersistedAppState(payload.appState);
+            pendingRemoteAppStateRef.current =
+              Object.keys(persistedAppState).length > 0
+                ? persistedAppState
+                : null;
+            scheduleRemoteFlush();
+          }
+        }
+        if (Date.now() - joinedAtMs > SCENE_SAVED_CATCHUP_WINDOW_MS) return;
+        void catchUpScene();
+      },
+    );
     const detachRoomJoin = bindRoomJoin(socket, drawingId, me, (payload) => {
       if (cancelled) return;
+      joinedAtMs = Date.now();
       void catchUpScene();
       const serverUser = payload?.user;
       if (!serverUser || typeof serverUser.id !== "string") return;
@@ -764,6 +803,7 @@ export const useEditorCollaboration = ({
       socket.off("cursor-move");
       socket.off("visible-bounds");
       socket.off("element-update");
+      socket.off("scene-saved");
       socket.off("drawing-server-update");
       socket.disconnect();
       if (remoteFlushRafIdRef.current !== null) {

@@ -400,6 +400,8 @@ const drawingUpdateSchemaBase = drawingBaseSchema.extend({
   files: filesFieldSchema,
   version: z.number().int().positive().optional(),
   expectedVersion: z.number().int().optional(),
+  // Custom fork: editor autosave – merge elements server-side, slim response.
+  autosave: z.boolean().optional(),
 });
 export const sanitizeDrawingUpdateData = (
   data: {

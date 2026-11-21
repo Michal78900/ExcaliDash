@@ -55,6 +55,7 @@ describe("persisted collaboration scene broadcasts", () => {
         files: z.record(z.string(), z.any()).optional(),
         preview: z.string().optional(),
         version: z.number().optional(),
+        autosave: z.boolean().optional(),
         collectionId: z.string().nullable().optional(),
       }),
       getRequestPrincipal: async () => ({ kind: "user", userId: ownerId }),
@@ -94,7 +95,9 @@ describe("persisted collaboration scene broadcasts", () => {
       },
     });
 
-  it("delivers the committed scene and merged files to peers that missed the realtime delta", async () => {
+  // Custom fork: peers already got the edit live; only a short notice goes out
+  // (upstream sent every element and file to every peer on every save).
+  it("announces a committed scene with a short notice instead of the whole scene", async () => {
     const drawing = await createDrawing();
     const elements = [
       { id: "earlier", version: 1 },
@@ -111,17 +114,93 @@ describe("persisted collaboration scene broadcasts", () => {
     expect(response.status).toBe(200);
     expect(to).toHaveBeenCalledWith(`drawing_${drawing.id}`);
     expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith("element-update", {
+    expect(emit).toHaveBeenCalledWith("scene-saved", {
       drawingId: drawing.id,
-      persisted: true,
       version: 4,
-      elements: response.body.elements,
       appState: { viewBackgroundColor: "#dddddd", gridModeEnabled: true },
-      files: response.body.files,
-      elementOrder: ["earlier", "new"],
     });
     expect(response.body.files).toHaveProperty("earlierImage");
     expect(response.body.files).toHaveProperty("newImage");
+  });
+
+  it("merges concurrent autosaves from stale versions instead of rejecting them", async () => {
+    const drawing = await createDrawing();
+    const first = await request(app)
+      .put(`/drawings/${drawing.id}`)
+      .send({
+        elements: [
+          { id: "earlier", version: 1 },
+          { id: "fromA", version: 1 },
+        ],
+        version: 3,
+        autosave: true,
+      });
+    expect(first.status).toBe(200);
+    // B saved from the same (now stale) version and never saw A's element.
+    const second = await request(app)
+      .put(`/drawings/${drawing.id}`)
+      .send({
+        elements: [
+          { id: "earlier", version: 2, isDeleted: true },
+          { id: "fromB", version: 1 },
+        ],
+        version: 3,
+        autosave: true,
+      });
+    expect(second.status).toBe(200);
+    // Slim response: metadata only, never the scene echoed back.
+    expect(second.body).toMatchObject({
+      id: drawing.id,
+      version: 5,
+      updatedAt: expect.any(String),
+      accessLevel: "owner",
+    });
+    expect(second.body).not.toHaveProperty("elements");
+    expect(second.body).not.toHaveProperty("files");
+    const stored = await prisma.drawing.findUniqueOrThrow({
+      where: { id: drawing.id },
+    });
+    const storedElements = JSON.parse(stored.elements) as {
+      id: string;
+      version: number;
+      isDeleted?: boolean;
+    }[];
+    expect(storedElements.map((el) => el.id).sort()).toEqual([
+      "earlier",
+      "fromA",
+      "fromB",
+    ]);
+    expect(storedElements.find((el) => el.id === "earlier")).toMatchObject({
+      version: 2,
+      isDeleted: true,
+    });
+  });
+
+  it("keeps the newer stored element when an autosave carries an older copy", async () => {
+    const drawing = await prisma.drawing.create({
+      data: {
+        userId: ownerId,
+        name: "Newer stored",
+        elements: JSON.stringify([
+          { id: "a", version: 5, x: 50 },
+          { id: "b", version: 1 },
+        ]),
+        appState: "{}",
+        files: "{}",
+        version: 3,
+      },
+    });
+    await request(app)
+      .put(`/drawings/${drawing.id}`)
+      .send({ elements: [{ id: "a", version: 4, x: 40 }], autosave: true })
+      .expect(200);
+    const stored = await prisma.drawing.findUniqueOrThrow({
+      where: { id: drawing.id },
+    });
+    expect(JSON.parse(stored.elements)).toEqual([
+      { id: "a", version: 5, x: 50 },
+      { id: "b", version: 1 },
+    ]);
   });
 
   it("does not broadcast a scene rejected by its version guard", async () => {

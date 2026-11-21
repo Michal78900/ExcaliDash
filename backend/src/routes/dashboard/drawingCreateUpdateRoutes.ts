@@ -23,6 +23,7 @@ import {
   countLiveElements,
   isVersionConflict,
 } from "./sceneUpdate";
+import { mergeSceneElements } from "./sceneMerge";
 import { collectRetainedDrawingFileIds } from "../storage/retainedFiles";
 import {
   prefersMinimalReturn,
@@ -278,6 +279,7 @@ export const registerDrawingCreateUpdateRoutes = (
         files?: Record<string, unknown>;
         version?: number;
         expectedVersion?: number;
+        autosave?: boolean;
       };
 
       const ownerUserId = existingDrawing.userId;
@@ -288,9 +290,13 @@ export const registerDrawingCreateUpdateRoutes = (
         payload.elements !== undefined ||
         payload.appState !== undefined ||
         payload.files !== undefined;
+      // Custom fork: an editor autosave is merged into the stored scene
+      // instead of being rejected when a collaborator saved in between.
+      const isAutosave = isSceneUpdate && payload.autosave === true;
 
       if (
         isSceneUpdate &&
+        !isAutosave &&
         payload.version !== undefined &&
         payload.version !== existingDrawing.version
       ) {
@@ -413,7 +419,8 @@ export const registerDrawingCreateUpdateRoutes = (
         }
       }
 
-      const minimal = prefersMinimalReturn(req);
+      // Custom fork: autosaves never need the scene echoed back.
+      const minimal = prefersMinimalReturn(req) || isAutosave;
       const snapshotMinIntervalMs = config.snapshotMinIntervalMs ?? 0;
       type SceneUpdate = Awaited<ReturnType<typeof applySceneUpdateTx>>;
       let updatedDrawing: SceneUpdate["drawing"] | null = null;
@@ -426,10 +433,23 @@ export const registerDrawingCreateUpdateRoutes = (
             drawingId: id,
             parseJsonField,
             versionGuard:
-              payload.version !== undefined ? payload.version : "optimistic",
-            maxRetries: payload.version === undefined ? 2 : 0,
-            mutate: () => ({
-              data,
+              payload.version !== undefined && !isAutosave
+                ? payload.version
+                : "optimistic",
+            maxRetries: payload.version === undefined || isAutosave ? 2 : 0,
+            mutate: (current) => ({
+              data:
+                isAutosave && Array.isArray(payload.elements)
+                  ? {
+                      ...data,
+                      elements: JSON.stringify(
+                        mergeSceneElements(
+                          parseJsonField<unknown[]>(current.elements, []),
+                          payload.elements,
+                        ),
+                      ),
+                    }
+                  : data,
               incomingFiles: processedFilesForUpdate,
               requiredFileIds: requiredFileIdsForUpdate,
             }),
@@ -534,23 +554,18 @@ export const registerDrawingCreateUpdateRoutes = (
         const listenerCount =
           (roomSockets?.size ?? 0) - (senderSocketId ? 1 : 0);
         if (!rooms || listenerCount > 0) {
-          // A peer can join after the realtime delta but before this autosave.
-          // Deliver the committed scene so that edit is eventually received.
-          const elements = parseJsonField<unknown>(savedScene.elements, []);
-          const savedElements = Array.isArray(elements) ? elements : [];
+          // Custom fork: collaborators already received this edit live. Only a
+          // short notice (version + small persisted appState) goes out, so
+          // peers that joined in the last moments can re-read the scene;
+          // upstream sent the whole scene (all elements and files) to every
+          // peer on every autosave, which made busy boards lag.
           const room = io.to(roomId);
           (senderSocketId ? room.except(senderSocketId) : room).emit(
-            "element-update",
+            "scene-saved",
             {
               drawingId: id,
-              persisted: true,
               version: updatedDrawing.version,
-              elements: savedElements,
               appState: parseJsonField(savedScene.appState, {}),
-              files: parseJsonField(savedScene.files, {}),
-              elementOrder: savedElements
-                .map((element: { id?: unknown } | null) => element?.id)
-                .filter((elementId: unknown) => typeof elementId === "string"),
             },
           );
         }

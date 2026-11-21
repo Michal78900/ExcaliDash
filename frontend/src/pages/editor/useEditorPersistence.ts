@@ -179,9 +179,6 @@ export const useEditorPersistence = ({
       // Queued arguments may predate a previous conflict merge. Sample the live
       // scene when the queued save starts, including its deletion tombstones.
       const liveElements = editor?.getSceneElementsIncludingDeleted?.();
-      // Pair the sampled scene with the version it is based on. A peer's
-      // saved-scene broadcast may advance the tracked version meanwhile.
-      const sampledVersion = refs.currentDrawingVersion.current;
       const candidateElements = Array.isArray(liveElements)
         ? liveElements
         : Array.isArray(refs.latestElements.current)
@@ -274,7 +271,6 @@ export const useEditorPersistence = ({
         filesToSave: Record<string, any>,
         appStateToSave: Record<string, any>,
         sendFiles: boolean,
-        baseVersion: number | null,
       ): Promise<void> => {
         if (!canEditRef.current || !isCurrent()) return;
         try {
@@ -285,7 +281,8 @@ export const useEditorPersistence = ({
               elements: Array.from(elementsToSave),
               appState: appStateToSave,
               ...(sendFiles ? { files: filesToSave } : {}),
-              version: baseVersion ?? undefined,
+              // Custom fork: merged server-side instead of version-checked.
+              autosave: true,
             },
             ...(socketId ? [{ socketId }] : []),
           );
@@ -325,7 +322,6 @@ export const useEditorPersistence = ({
                 reconciled.files,
                 reconciledAppState,
                 true,
-                refs.currentDrawingVersion.current,
               );
               return;
             }
@@ -340,7 +336,6 @@ export const useEditorPersistence = ({
         filesToPersist,
         persistableAppState,
         filesChangedSincePersist,
-        sampledVersion,
       );
     } catch (err) {
       if (err instanceof DrawingSaveConflictError) {

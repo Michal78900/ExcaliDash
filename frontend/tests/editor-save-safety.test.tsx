@@ -274,7 +274,7 @@ describe("serialized saves", () => {
     });
     expect(api.saveDrawing).toHaveBeenLastCalledWith(
       "drawing",
-      expect.objectContaining({ elements: finalEdit, version: 2 }),
+      expect.objectContaining({ elements: finalEdit }),
     );
     expect(
       vi.mocked(api.saveDrawing).mock.calls.every(([id]) => id === "drawing"),

@@ -133,7 +133,9 @@ type ApplySceneUpdateArgs = {
   // Version History snapshot of the pre-update scene. Defaults to SNAPSHOTS_ENABLED.
   snapshotsEnabled?: boolean;
   maxRetries?: number;
-  mutate: () => SceneMutation | Promise<SceneMutation>;
+  mutate: (
+    current: CurrentScene,
+  ) => SceneMutation | Promise<SceneMutation>;
   resultSelect?: Prisma.DrawingSelect;
   // Autosave coalescing. Without it (history restore, imports) every update
   // snapshots the previous state.
@@ -189,7 +191,7 @@ export const applySceneUpdateTx = async (
           throw versionConflictError;
         }
 
-        const mutation = await mutate();
+        const mutation = await mutate(current);
 
         if (mutation.requiredFileIds?.length) {
           const requiredIds = new Set(mutation.requiredFileIds);

@@ -190,7 +190,8 @@ describe("scene save/load response efficiency", () => {
     expect(emit).not.toHaveBeenCalled();
   });
 
-  it("broadcasts the committed scene to peers but not back to the saver", async () => {
+  // Custom fork: peers get a short scene-saved notice, not the whole scene.
+  it("announces the committed scene to peers but not back to the saver", async () => {
     const drawing = await createDrawing();
     rooms.set(`drawing_${drawing.id}`, new Set(["saver", "peer"]));
     await request(app)
@@ -204,16 +205,10 @@ describe("scene save/load response efficiency", () => {
       .expect(200);
     expect(except).toHaveBeenCalledWith("saver");
     expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith("element-update", {
+    expect(emit).toHaveBeenCalledWith("scene-saved", {
       drawingId: drawing.id,
-      persisted: true,
       version: 2,
-      elements: [{ id: "a", version: 2 }],
       appState: { viewBackgroundColor: "#fff" },
-      files: {
-        img: { dataURL: "/api/files/x/img" },
-      },
-      elementOrder: ["a"],
     });
   });
 

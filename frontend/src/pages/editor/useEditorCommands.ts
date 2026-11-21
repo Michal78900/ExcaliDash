@@ -195,7 +195,9 @@ export const useEditorCommands = ({
         // Same slimmed shape as the debounced save: uploaded images ship as a
         // ref, un-uploaded ones stay inline (server interns them on receipt).
         files: applyUploadedFileRefs(files, refs.uploadedRefs.current),
-        version: refs.currentDrawingVersion.current ?? undefined,
+        // Custom fork: merged server-side like the debounced autosave, so a
+        // collaborator's save in between does not 409 away the last edits.
+        autosave: true,
       });
     };
     window.addEventListener("pagehide", handlePageHide);

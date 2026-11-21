@@ -405,7 +405,12 @@ export const registerSocketHandlers = ({
       const drawingId =
         typeof data?.drawingId === "string" ? data.drawingId : null;
       if (!drawingId) return;
-      const joinedAccess = await getRoomAccess(drawingId, true);
+      // Custom fork: browser sockets use the short-TTL room access cache like
+      // cursor events do; a fresh check revalidated the whole room on every
+      // drawing frame (~10/s per collaborator). Sharing routes still kick
+      // revoked collaborators at once via `revalidateDrawingAccess`. API-key
+      // sockets stay fresh so key revocation and scope changes apply at once.
+      const joinedAccess = await getRoomAccess(drawingId, Boolean(state.apiKeyId));
       if (!joinedAccess) return;
       if (!canEditDrawing(joinedAccess)) {
         socket.emit("error", {

@@ -422,9 +422,12 @@ const isCrossOriginApi = (): boolean => {
 };
 
 /** Save a scene and request only the resulting metadata. */
+// Custom fork: `autosave: true` (sent without `version`) makes the server merge
+// the elements into the stored scene, so a collaborator's save in between no
+// longer forces a 409 → reload → resave round trip.
 export const saveDrawing = async (
   id: string,
-  data: Partial<Drawing> & { expectedVersion?: number },
+  data: Partial<Drawing> & { expectedVersion?: number; autosave?: boolean },
   options?: { socketId?: string | null },
 ): Promise<DrawingSaveResult> => {
   const json = JSON.stringify(data);
