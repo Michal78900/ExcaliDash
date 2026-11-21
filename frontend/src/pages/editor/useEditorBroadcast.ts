@@ -26,6 +26,9 @@ type UseEditorBroadcastParams = {
   ) => void;
   debouncedSavePreview: (drawingId: string) => void;
   hasElementChanged: (element: any, status?: unknown) => boolean;
+  computeElementsFingerprint: (elements: readonly any[]) => string;
+  elementVersionMap: MutableRefObject<Map<string, unknown>>;
+  trackingEpochRef: MutableRefObject<number>;
   recordElementVersion: (element: any) => void;
   markSceneChanged: () => void;
 };
@@ -42,6 +45,9 @@ export const useEditorBroadcast = ({
   uploadedRefs,
   debouncedSave,
   debouncedSavePreview,
+  computeElementsFingerprint,
+  elementVersionMap,
+  trackingEpochRef,
   hasElementChanged,
   recordElementVersion,
   markSceneChanged,
@@ -51,12 +57,43 @@ export const useEditorBroadcast = ({
   const trailingArgsRef = useRef<
     [readonly any[], Record<string, any> | undefined] | null
   >(null);
+  // State after the last full scan. If the scene fingerprint and every input
+  // the scan depends on are unchanged, the scan would find nothing to send.
+  const lastScanRef = useRef<{
+    fingerprint: string;
+    epoch: number;
+    order: readonly string[] | null;
+    trackedCount: number;
+    // Image status normalization reads files, so new files force a rescan.
+    files: Record<string, any>;
+  } | null>(null);
 
   const emitChanges = useCallback(
     (elements: readonly any[], currentFiles?: Record<string, any>) => {
       if (!drawingId) return;
       const changes: any[] = [];
       const nextFiles = currentFiles || excalidrawAPI.current?.getFiles() || {};
+      const filesDelta = getFilesDelta(lastSyncedFilesRef.current, nextFiles);
+      const shouldSyncFiles = Object.keys(filesDelta).length > 0;
+      if (Object.keys(nextFiles || {}).length > 0) {
+        latestFilesRef.current = nextFiles;
+      }
+      // Custom fork: Excalidraw's onChange also fires for peer cursors,
+      // selection and viewport moves. Skip the per-element scan when the scene
+      // fingerprint and every input the scan depends on are unchanged.
+      const fingerprint = computeElementsFingerprint(elements);
+      const lastScan = lastScanRef.current;
+      if (
+        !shouldSyncFiles &&
+        lastScan &&
+        lastScan.fingerprint === fingerprint &&
+        lastScan.epoch === trackingEpochRef.current &&
+        lastScan.order === lastSyncedElementOrderRef.current &&
+        lastScan.trackedCount === elementVersionMap.current.size &&
+        lastScan.files === nextFiles
+      ) {
+        return;
+      }
       const previousOrder = lastSyncedElementOrderRef.current;
       let orderChanged = previousOrder === null;
       let orderIndex = 0;
@@ -81,11 +118,13 @@ export const useEditorBroadcast = ({
         elementOrder = getElementOrder(elements);
         lastSyncedElementOrderRef.current = elementOrder;
       }
-      const filesDelta = getFilesDelta(lastSyncedFilesRef.current, nextFiles);
-      const shouldSyncFiles = Object.keys(filesDelta).length > 0;
-      if (Object.keys(nextFiles || {}).length > 0) {
-        latestFilesRef.current = nextFiles;
-      }
+      lastScanRef.current = {
+        fingerprint,
+        epoch: trackingEpochRef.current,
+        order: lastSyncedElementOrderRef.current,
+        trackedCount: elementVersionMap.current.size,
+        files: nextFiles,
+      };
       if (shouldSyncFiles) {
         lastSyncedFilesRef.current = nextFiles;
       }
@@ -110,9 +149,11 @@ export const useEditorBroadcast = ({
       }
     },
     [
+      computeElementsFingerprint,
       debouncedSave,
       debouncedSavePreview,
       drawingId,
+      elementVersionMap,
       excalidrawAPI,
       hasElementChanged,
       lastSyncedElementOrderRef,
@@ -123,6 +164,7 @@ export const useEditorBroadcast = ({
       markSceneChanged,
       socketRef,
       socketMeRef,
+      trackingEpochRef,
       uploadedRefs,
     ],
   );

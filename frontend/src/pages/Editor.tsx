@@ -82,8 +82,13 @@ const ExcalidrawEditor: React.FC = () => {
   });
   const me: UserIdentity = useEditorIdentity(user);
   const [isReady, setIsReady] = useState(false);
-  const { elementVersionMap, hasElementChanged, recordElementVersion } =
-    useEditorElementTracking();
+  const {
+    computeElementsFingerprint,
+    elementVersionMap,
+    hasElementChanged,
+    recordElementVersion,
+    trackingEpochRef,
+  } = useEditorElementTracking();
   const isBootstrappingScene = useRef(true);
   const hasHydratedInitialScene = useRef(false);
   const isUnmounting = useRef(false);
@@ -240,6 +245,9 @@ const ExcalidrawEditor: React.FC = () => {
     uploadedRefs: uploadedFileRefsRef,
     debouncedSave,
     debouncedSavePreview,
+    computeElementsFingerprint,
+    elementVersionMap,
+    trackingEpochRef,
     hasElementChanged,
     recordElementVersion,
     markSceneChanged,
