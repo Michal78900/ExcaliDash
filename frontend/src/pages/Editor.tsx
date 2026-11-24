@@ -79,6 +79,7 @@ const ExcalidrawEditor: React.FC = () => {
     autoHideEnabled,
     isRenaming,
     isShareOpen,
+    pinned: accessLevel === "view",
   });
   const me: UserIdentity = useEditorIdentity(user);
   const [isReady, setIsReady] = useState(false);

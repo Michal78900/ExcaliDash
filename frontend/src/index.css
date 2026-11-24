@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom fork: editor height. dvh tracks the visible viewport on iPadOS
+   Safari, where 100vh reaches under the browser bars. */
+:root {
+  --editor-vh: 100vh;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --editor-vh: 100dvh;
+  }
+}
+
 @layer base {
   :root {
     --excalidash-display-font: Excalifont;

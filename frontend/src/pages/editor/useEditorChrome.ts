@@ -6,6 +6,13 @@ type UseEditorChromeOptions = {
   autoHideEnabled: boolean;
   isRenaming: boolean;
   isShareOpen: boolean;
+  /**
+   * Custom fork: keep the header (and its "Read-only" badge) on screen. Touch
+   * devices never send the mousemove that brings an auto-hidden header back,
+   * so a view-only visitor on an iPad would otherwise lose the only hint why
+   * the toolbar is missing.
+   */
+  pinned?: boolean;
 };
 
 export const useEditorChrome = ({
@@ -13,6 +20,7 @@ export const useEditorChrome = ({
   autoHideEnabled,
   isRenaming,
   isShareOpen,
+  pinned = false,
 }: UseEditorChromeOptions) => {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
 
@@ -24,7 +32,7 @@ export const useEditorChrome = ({
   }, [drawingName]);
 
   useEffect(() => {
-    if (!autoHideEnabled || isRenaming || isShareOpen) {
+    if (!autoHideEnabled || isRenaming || isShareOpen || pinned) {
       setIsHeaderVisible(true);
       return;
     }
@@ -62,7 +70,7 @@ export const useEditorChrome = ({
       handleMouseMove.cancel();
       if (hideTimeout !== null) clearTimeout(hideTimeout);
     };
-  }, [autoHideEnabled, isRenaming, isShareOpen]);
+  }, [autoHideEnabled, isRenaming, isShareOpen, pinned]);
 
   return {
     isHeaderVisible,

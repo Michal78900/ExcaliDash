@@ -8,9 +8,11 @@ import {
   ChevronUp,
   CloudOff,
   Download,
+  Eye,
   History,
   Loader2,
   Share2,
+  X,
 } from "lucide-react";
 import clsx from "clsx";
 import { Toaster } from "sonner";
@@ -129,6 +131,62 @@ const CollaboratorAvatar = ({
   );
 };
 
+const readOnlyNoticeKey = (drawingId: string) =>
+  `excalidash:readOnlyNoticeDismissed:${drawingId}`;
+
+const readDismissed = (drawingId: string): boolean => {
+  try {
+    return window.sessionStorage.getItem(readOnlyNoticeKey(drawingId)) === "1";
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Custom fork: Excalidraw hides its whole toolbar (tools, undo/redo) in view
+ * mode, which on a tablet looks like a broken editor — the pen only pans.
+ * Say plainly that this board is view-only and how to get edit access.
+ */
+export const ReadOnlyNotice: React.FC<{ drawingId: string }> = ({
+  drawingId,
+}) => {
+  const [dismissed, setDismissed] = React.useState(() =>
+    readDismissed(drawingId),
+  );
+  React.useEffect(() => setDismissed(readDismissed(drawingId)), [drawingId]);
+  if (dismissed) return null;
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      window.sessionStorage.setItem(readOnlyNoticeKey(drawingId), "1");
+    } catch {
+      // storage unavailable (private mode): dismissal lasts until reload
+    }
+  };
+  return (
+    <div
+      role="status"
+      data-testid="read-only-notice"
+      className="absolute left-1/2 top-3 z-20 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 shadow-md dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+    >
+      <Eye size={18} className="shrink-0" />
+      <span>
+        <strong className="font-semibold">View only.</strong> You can't edit
+        this drawing, so the drawing tools are hidden. Ask the owner for
+        &ldquo;Can edit&rdquo; access.
+      </span>
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label="Dismiss"
+        className="shrink-0 rounded-md p-1 hover:bg-amber-100 dark:hover:bg-amber-900"
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
+};
+
 export const EditorView: React.FC<EditorViewProps> = ({
   id,
   accessLevel,
@@ -179,7 +237,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onToggleTheme,
 }) => (
   <div
-    className="h-screen flex flex-col bg-white dark:bg-neutral-950 overflow-hidden"
+    className="flex flex-col bg-white dark:bg-neutral-950 overflow-hidden"
+    style={{ height: "var(--editor-vh, 100vh)" }}
     onKeyDownCapture={(event) => {
       if (event.altKey && event.shiftKey && event.code === "KeyD") {
         event.preventDefault();
@@ -331,7 +390,11 @@ export const EditorView: React.FC<EditorViewProps> = ({
         onCanvasDropCapture(event);
       }}
       style={{
-        height: isHeaderVisible ? "calc(100vh - 4rem)" : "100vh",
+        // dvh: iPadOS Safari's 100vh is the tallest viewport, which pushes
+        // the bottom of the editor under the browser bars
+        height: isHeaderVisible
+          ? "calc(var(--editor-vh, 100vh) - 4rem)"
+          : "var(--editor-vh, 100vh)",
         marginTop: isHeaderVisible ? "4rem" : "0",
       }}
     >
@@ -387,6 +450,13 @@ export const EditorView: React.FC<EditorViewProps> = ({
           </span>
         </div>
       )}
+      {accessLevel === "view" &&
+      id &&
+      initialData &&
+      !loadError &&
+      !isHistoryOpen ? (
+        <ReadOnlyNotice drawingId={id} />
+      ) : null}
       {historyPreview ? (
         <HistoryPreviewCanvas
           snapshot={historyPreview}
